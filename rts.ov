@@ -1,0 +1,1020 @@
+rule("player 0 = mercy")
+{
+	event
+	{
+		Player Joined Match;
+		Team 2;
+		Slot 0;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero(Mercy));
+	}
+}
+
+rule("spawn bots")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Hero(Soldier: 76), Team 2, 1, Nearest Walkable Position(Vector(0, 0, 0)), Vector(0, 0, 0));
+		Create Dummy Bot(Hero(Soldier: 76), Team 2, 2, Nearest Walkable Position(Vector(0, 0, 0)), Vector(0, 0, 0));
+		Create Dummy Bot(Hero(Soldier: 76), Team 2, 3, Nearest Walkable Position(Vector(0, 0, 0)), Vector(0, 0, 0));
+		Create Dummy Bot(Hero(Orisa), Team 2, 4, Nearest Walkable Position(Vector(0, 0, 0)), Vector(0, 0, 0));
+		Create Dummy Bot(Hero(Orisa), Team 2, 5, Nearest Walkable Position(Vector(0, 0, 0)), Vector(0, 0, 0));
+	}
+}
+
+rule("unit - indicators")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Create Icon(Filtered Array(Players On Hero(Hero(Mercy), Team 2), Array Contains(Player Variable(Current Array Element, A),
+			Event Player)), Event Player, Arrow: Down, Visible To and Position, White, True);
+		Create Beam Effect(Filtered Array(Players On Hero(Hero(Mercy), Team 2), And(True, Compare(Distance Between(Event Player,
+			Player Variable(Event Player, A)), >, 2.500))), Good Beam, Event Player, Player Variable(Event Player, A), White,
+			Visible To Position and Radius);
+		Create Icon(Filtered Array(Players On Hero(Hero(Mercy), Team Of(Event Player)), And(Is In View Angle(Current Array Element,
+			Event Player, 5), Compare(Player Closest To Reticle(Current Array Element, Team Of(Current Array Element)), ==,
+			Event Player))), Event Player, Eye, Visible To and Position, Green, False);
+	}
+}
+
+rule("commander - lmb + rmb - set shooting target (position)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Player Variable(Event Player, D) != 0;
+		Player Variable(Event Player, C) == 0;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 2);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), C, Null);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), A, Null);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), E, Ray Cast Hit Position(
+			Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(Facing Direction Of(Event Player), 200)), All Players(
+			All Teams), Event Player, True));
+		Modify Player Variable(Event Player, C, Add, 1);
+		Wait(0.016, Ignore Condition);
+		Loop If(Compare(Player Variable(Event Player, C), <, Count Of(Player Variable(Event Player, A))));
+		Set Player Variable(Event Player, C, 0);
+		Set Player Variable(Event Player, D, 4);
+	}
+}
+
+rule("commander - rmb - first click - pressed - simple move")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Player Variable(Event Player, D) == 0;
+		Player Variable(Event Player, C) == 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, D, 1);
+		Chase Player Variable Over Time(Event Player, D, 2, 0.200, Destination and Duration);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), A, Add(Vector(0, 0.500, 0),
+			Nearest Walkable Position(Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			Facing Direction Of(Event Player), 200)), All Players(All Teams), Event Player, True))));
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), D, False);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), B, True);
+		Modify Player Variable(Event Player, C, Add, 1);
+		Wait(0.016, Ignore Condition);
+		Skip If(Compare(Is Button Held(Event Player, Primary Fire), ==, False), 3);
+		Set Player Variable(Event Player, C, 0);
+		Set Player Variable(Event Player, D, 0);
+		Abort;
+		Loop If(Compare(Player Variable(Event Player, C), <, Count Of(Player Variable(Event Player, A))));
+		Set Player Variable(Event Player, C, 0);
+	}
+}
+
+rule("commander - rmb - first click - released within time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == False;
+		Player Variable(Event Player, D) > 1;
+		Player Variable(Event Player, D) < 2;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 3);
+		Chase Player Variable Over Time(Event Player, D, 4, 0.100, Destination and Duration);
+	}
+}
+
+rule("commander - rmb - first click - released after time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == False;
+		Player Variable(Event Player, D) == 2;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 0);
+	}
+}
+
+rule("commander - rmb - second click - timeout")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == False;
+		Player Variable(Event Player, D) == 4;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 0);
+	}
+}
+
+rule("commander - rmb - second click - pressed within time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Player Variable(Event Player, D) > 3;
+		Player Variable(Event Player, D) < 4;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 5);
+		Chase Player Variable Over Time(Event Player, D, 6, 0.500, Destination and Duration);
+	}
+}
+
+rule("commander - rmb - second click - released within time - hurry move")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == False;
+		Player Variable(Event Player, D) > 5;
+		Player Variable(Event Player, D) < 6;
+	}
+
+	actions
+	{
+		Skip If(Compare(Player Variable(Event Player, D), ==, 5), 1);
+		Set Player Variable(Event Player, C, 0);
+		Stop Chasing Player Variable(Event Player, D);
+		Set Player Variable(Event Player, D, 5);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), A, Add(Vector(0, 0.500, 0),
+			Nearest Walkable Position(Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			Facing Direction Of(Event Player), 200)), All Players(All Teams), Event Player, True))));
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), D, True);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), E, Null);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), C, Null);
+		Stop Holding Button(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), Primary Fire);
+		Set Player Variable(Value In Array(Player Variable(Event Player, A), Player Variable(Event Player, C)), B, True);
+		Modify Player Variable(Event Player, C, Add, 1);
+		Wait(0.016, Ignore Condition);
+		Skip If(Compare(Is Button Held(Event Player, Primary Fire), ==, False), 3);
+		Set Player Variable(Event Player, C, 0);
+		Set Player Variable(Event Player, D, 0);
+		Abort;
+		Loop If(Compare(Player Variable(Event Player, C), <, Count Of(Player Variable(Event Player, A))));
+		Set Player Variable(Event Player, C, 0);
+		Set Player Variable(Event Player, D, 0);
+	}
+}
+
+rule("commander - lmb - first click - pressed - clear selected units")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Player Variable(Event Player, B) == 0;
+		Is Button Held(Event Player, Secondary Fire) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, B, 1);
+		Chase Player Variable Over Time(Event Player, B, 2, 0.500, Destination and Duration);
+		Set Player Variable(Event Player, F, Player Variable(Event Player, A));
+		Set Player Variable(Event Player, A, Empty Array);
+	}
+}
+
+rule("commander - lmb - first click - released within time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+		Player Variable(Event Player, B) > 1;
+		Player Variable(Event Player, B) < 2;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, B);
+		Set Player Variable(Event Player, B, 3);
+		Chase Player Variable Over Time(Event Player, B, 4, 0.200, Destination and Duration);
+	}
+}
+
+rule("commander - lmb - first click - released after time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+		Player Variable(Event Player, B) == 2;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, B);
+		Set Player Variable(Event Player, B, 0);
+	}
+}
+
+rule("commander - lmb - second click - timeout")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+		Player Variable(Event Player, B) == 4;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, B);
+		Set Player Variable(Event Player, B, 0);
+	}
+}
+
+rule("commander - lmb - second click - pressed within time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Player Variable(Event Player, B) > 3;
+		Player Variable(Event Player, B) < 4;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, B);
+		Set Player Variable(Event Player, B, 5);
+		Chase Player Variable Over Time(Event Player, B, 6, 0.500, Destination and Duration);
+	}
+}
+
+rule("commander - lmb - second click - released within time - teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+		Player Variable(Event Player, B) > 5;
+		Player Variable(Event Player, B) < 6;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, B, 0);
+		Set Player Variable(Event Player, A, Player Variable(Event Player, F));
+		Skip If(Compare(Count Of(Players in View Angle(Event Player, Team Of(Event Player), 5)), ==, 0), 2);
+		Teleport(Event Player, Position Of(Player Closest To Reticle(Event Player, Team Of(Event Player))));
+		Abort;
+		Teleport(Event Player, Nearest Walkable Position(Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player),
+			Multiply(Facing Direction Of(Event Player), 100)), All Players(Team Of(Event Player)), Event Player, True)));
+	}
+}
+
+rule("commander - lmb - after second click - reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+		Player Variable(Event Player, B) == 6;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, B, 0);
+	}
+}
+
+rule("commander - lmb hold - select unit")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Secondary Fire) == False;
+		Or(Compare(Count Of(Players in View Angle(Event Player, Team Of(Event Player), 5)), >, 0), Compare(Ray Cast Hit Player(
+			Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(Facing Direction Of(Event Player), 100)), All Players(
+			Team Of(Event Player)), Event Player, True), !=, Null)) == True;
+		Array Contains(Player Variable(Event Player, A), Player Closest To Reticle(Event Player, Team 2)) == False;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, A, Append To Array, Player Closest To Reticle(Event Player, Team 2));
+	}
+}
+
+rule("unit - start shooting target (position)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, E) != Null;
+	}
+
+	actions
+	{
+		Stop Throttle In Direction(Event Player);
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Player Variable(Event Player, E)), 200, To World,
+			Direction and Turn Rate);
+		Start Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("unit - stop shooting target (position)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, E) == Null;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("unit - reset waypoint")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, B) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, B, False);
+		Skip If(Compare(Distance Between(Event Player, Player Variable(Event Player, A)), <=, 1.500), 1);
+		Start Throttle In Direction(Event Player, Subtract(Player Variable(Event Player, A), Position Of(Event Player)), 1, To World,
+			Replace existing throttle, Direction and Magnitude);
+		Skip If(Compare(Player Variable(Event Player, D), ==, True), 1);
+		Skip If(Or(Compare(Player Variable(Event Player, C), !=, Null), Compare(Player Variable(Event Player, E), !=, Null)), 1);
+		Start Facing(Event Player, Vector(X Component Of(Subtract(Player Variable(Event Player, A), Eye Position(Event Player))), 0,
+			Z Component Of(Subtract(Player Variable(Event Player, A), Eye Position(Event Player)))), 100, To World,
+			Direction and Turn Rate);
+	}
+}
+
+rule("unit - waypoint reached")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Distance Between(Event Player, Player Variable(Event Player, A)) <= 1.500;
+	}
+
+	actions
+	{
+		Stop Throttle In Direction(Event Player);
+		Set Player Variable(Event Player, D, False);
+	}
+}
+
+rule("commander invisible")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Set Invisible(Event Player, Enemies);
+	}
+}
+
+rule("commander ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) == 0;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 100);
+	}
+}
+
+rule("unit - search for target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, C) == Null;
+		Count Of(Filtered Array(Players in View Angle(Event Player, Opposite Team Of(Team Of(Event Player)), 90), And(Is Alive(
+			Current Array Element), And(Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+			Barriers Do Not Block LOS), Compare(Distance Between(Event Player, Current Array Element), <, 200))))) > 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, C, Player Closest To Reticle(Event Player, Opposite Team Of(Team Of(Event Player))));
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Player Variable(Event Player, C))), 200,
+			To World, Direction and Turn Rate);
+		Start Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("unit - hit by target")
+{
+	event
+	{
+		Player Took Damage;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, C) == Null;
+		Player Variable(Event Player, E) == Null;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, C, Attacker);
+	}
+}
+
+rule("unit - lost sight of target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, C) != Null;
+		Or(Is Dead(Player Variable(Event Player, C)), Not(Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(
+			Event Player, C)), Barriers Do Not Block LOS))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, C, Null);
+		Stop Facing(Event Player);
+		Stop Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("unit - shoot target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, C) != Null;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Player Variable(Event Player, C))), 200,
+			To World, Direction and Turn Rate);
+		Start Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("test hud")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Server Load, Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Speed Of(Players On Hero(Hero(Orisa), Team 2)), Null, Null, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("unit death - reset waypoint")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, A, Null);
+		Stop Throttle In Direction(Event Player);
+		Set Player Variable(Event Player, B, False);
+		Set Player Variable(Event Player, C, Null);
+		Set Player Variable(Event Player, D, False);
+		Set Player Variable(Event Player, D, Null);
+	}
+}
+
+rule("commander - teleport indicator")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is In Spawn Room(Event Player) == False;
+	}
+
+	actions
+	{
+		disabled Create Effect(Event Player, Sphere, White, Nearest Walkable Position(Ray Cast Hit Position(Eye Position(Event Player), Add(
+			Eye Position(Event Player), Multiply(Facing Direction Of(Event Player), 100)), All Players(All Teams), Event Player, True)),
+			10, Position and Radius);
+	}
+}
+
+rule("unit - orisa - sturdy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Speed Of(Event Player) > 4;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Multiply(Velocity Of(Event Player), -1.000), 1, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("orisa - sleep immunity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Has Status(Event Player, Asleep) == True;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Asleep);
+	}
+}
+
+rule("disable rules")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("soldier killed")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		Soldier: 76;
+	}
+
+	actions
+	{
+		Wait(15, Ignore Condition);
+		Respawn(Event Player);
+	}
+}
+
+rule("team 1 victory")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		Orisa;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Players(Team 2), And(Compare(Is Alive(Current Array Element), ==, True), Compare(Hero Of(
+			Current Array Element), ==, Hero(Orisa))))) == 0;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Team Score(Team 1, 200);
+	}
+}
+
+rule("team 1 death")
+{
+	event
+	{
+		Player Died;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, D, Nearest Walkable Position(Position Of(Event Player)));
+	}
+}
+
+rule("tombstones")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Create In-World Text(Filtered Array(All Players(All Teams), Compare(Is Alive(Event Player), ==, False)), Hero Icon String(Hero Of(
+			Event Player)), Player Variable(Event Player, D), 2, Do Not Clip, Visible To Position and String, White, Default Visibility);
+		Create Effect(Filtered Array(All Players(All Teams), Compare(Is Alive(Event Player), ==, False)), Ring, Green, Player Variable(
+			Event Player, D), 3, Visible To Position and Radius);
+		Create Effect(Filtered Array(All Players(All Teams), Compare(Is Alive(Event Player), ==, False)), Ring, Blue, Player Variable(
+			Event Player, D), Player Variable(Event Player, C), Visible To Position and Radius);
+	}
+}
+
+rule("team 1 revive in circle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == False;
+		Count Of(Filtered Array(All Players(Team 1), And(Is Alive(Current Array Element), Compare(Distance Between(Current Array Element,
+			Player Variable(Event Player, D)), <=, 3)))) >= 1;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, C);
+		Chase Player Variable At Rate(Event Player, C, 3, 0.500, Destination and Rate);
+	}
+}
+
+rule("team 1 revive out of circle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == False;
+		Count Of(Filtered Array(All Players(Team 1), And(Is Alive(Current Array Element), Compare(Distance Between(Current Array Element,
+			Player Variable(Event Player, D)), <=, 3)))) == 0;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, C);
+		Set Player Variable(Event Player, C, 0);
+	}
+}
+
+rule("team 1 revive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == False;
+		Player Variable(Event Player, C) == 3;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, C, 0);
+		Resurrect(Event Player);
+	}
+}
+
+rule("show ping")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Icon(Filtered Array(All Players(Team 2), Compare(Global Variable(B), !=, 0)), Global Variable(B), Arrow: Down,
+			Visible To and Position, Green, True);
+		Create Effect(Filtered Array(All Players(Team 2), Compare(Global Variable(B), !=, 0)), Sphere, Green, Global Variable(B), 1,
+			Visible To Position and Radius);
+		Create Icon(Filtered Array(All Players(Team 1), Compare(Global Variable(A), !=, 0)), Global Variable(A), Arrow: Down,
+			Visible To and Position, Green, True);
+		Create Effect(Filtered Array(All Players(Team 1), Compare(Global Variable(A), !=, 0)), Sphere, Green, Global Variable(A), 1,
+			Visible To Position and Radius);
+	}
+}
+
+rule("ping - team 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Set Global Variable(A, Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			Facing Direction Of(Event Player), 100)), All Players(All Teams), Event Player, True));
+		Stop Chasing Global Variable(C);
+		Set Global Variable(C, 10);
+		Chase Global Variable At Rate(C, 0, 1, Destination and Rate);
+	}
+}
+
+rule("remove ping - team 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(C) == 0;
+	}
+
+	actions
+	{
+		Set Global Variable(A, 0);
+	}
+}
+
+rule("disable respawning")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+	}
+}
